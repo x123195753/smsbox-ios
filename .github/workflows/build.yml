@@ -1,0 +1,36 @@
+name: Build IPA
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen & generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -project SmsBox.xcodeproj \
+            -scheme SmsBox \
+            -configuration Release \
+            -archivePath build/SmsBox.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R "build/SmsBox.xcarchive/Products/Applications/SmsBox.app" Payload/
+          zip -qry SmsBox-unsigned.ipa Payload
+          ls -lh SmsBox-unsigned.ipa
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmsBox-unsigned-ipa
+          path: SmsBox-unsigned.ipa
+          retention-days: 30
